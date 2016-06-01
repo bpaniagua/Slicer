@@ -277,7 +277,7 @@ endmacro()
 #
 # Deprecated macro - Will be removed for 4.4
 #
-macro(slicerMacroBuildQtModule)
+macro(slicerMacroBuildLoadableModule)
   set(options
     NO_INSTALL
     NO_TITLE
