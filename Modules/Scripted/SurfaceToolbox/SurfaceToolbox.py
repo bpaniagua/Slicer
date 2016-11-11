@@ -155,8 +155,18 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     self.layout.addWidget(normalsFrame)
     normalsFormLayout = qt.QFormLayout(normalsFrame)
 
-    flipNormalsCheckBox = qt.QCheckBox("Flip Normals")
-    normalsFormLayout.addWidget(flipNormalsCheckBox)
+    #flipNormalsCheckBox = qt.QCheckBox("Flip Normals")
+    #normalsFormLayout.addWidget(flipNormalsCheckBox)
+    flipNormalsRadioButton = qt.QRadioButton("Flip Normals")
+    flipNormalsRadioButton.setToolTip("Flip normals from its current state")
+    flipNormalsRadioButton.setAutoExclusive(1)
+    autoOrientNormalsRadioButton = qt.QRadioButton("AutoOrient Normals")
+    autoOrientNormalsRadioButton.setToolTip("Orient the normals outwards")
+    autoOrientNormalsRadioButton.setAutoExclusive(1)
+    normalOptionLayout = qt.QHBoxLayout()
+    normalOptionLayout.addWidget(flipNormalsRadioButton)
+    normalOptionLayout.addWidget(autoOrientNormalsRadioButton)
+    normalsFormLayout.addRow(normalOptionLayout)
 
     splittingCheckBox = qt.QCheckBox("Splitting")
     normalsFormLayout.addWidget(splittingCheckBox)
@@ -210,6 +220,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
       boundarySmoothing = True
       normals = False
       flipNormals = False
+      autoOrientNormals = False
       splitting = False
       featureAngle = 30.0
       cleaner = False
@@ -255,7 +266,8 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
 
       normalsButton.checked = state.normals
       normalsFrame.visible = state.normals
-      flipNormalsCheckBox.checked = state.flipNormals
+      flipNormalsRadioButton.checked = state.flipNormals
+      autoOrientNormalsRadioButton.checked = state.autoOrientNormals
       splittingCheckBox.checked = state.splitting
       featureAngleFrame.visible = state.splitting
       featureAngleSlider.value = state.featureAngle
@@ -306,7 +318,8 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
 
     connect(normalsButton, 'clicked(bool)', 'state.normals = args[0]')
 
-    connect(flipNormalsCheckBox, 'stateChanged(int)', 'state.flipNormals = bool(args[0])')
+    connect(flipNormalsRadioButton, 'toggled(bool)', 'state.flipNormals = bool(args[0])')
+    connect(autoOrientNormalsRadioButton, 'toggled(bool)', 'state.autoOrientNormals = bool(args[0])')
     connect(splittingCheckBox, 'stateChanged(int)', 'state.splitting = bool(args[0])')
     connect(featureAngleSlider, 'valueChanged(double)', 'state.featureAngle = args[0]')
     connect(featureAngleSpinBox, 'valueChanged(double)', 'state.featureAngle = args[0]')
@@ -385,14 +398,11 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
         surface = smoothing.GetOutputPort()
 
     if state.normals:
-      normals = vtk.vtkPolyDataNormals()
-      normals.AutoOrientNormalsOn()
-      normals.SetFlipNormals(state.flipNormals)
-      normals.SetSplitting(state.splitting)
-      normals.SetFeatureAngle(state.featureAngle)
-      normals.ConsistencyOn()
-      normals.SetInputConnection(surface)
-      surface = normals.GetOutputPort()
+      modelsLogic = slicer.modules.models.logic()
+      modelsLogic.FlipNormals(state.inputModelNode,state.outputModelNode,
+                              state.autoOrientNormals, state.flipNormals, state.splitting,
+                              state.featureAngle)
+      surface = state.outputModelNode.GetPolyDataConnection()
 
     if state.cleaner:
       cleaner = vtk.vtkCleanPolyData()
@@ -403,7 +413,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       connectivity = vtk.vtkPolyDataConnectivityFilter()
       connectivity.SetExtractionModeToLargestRegion()
       connectivity.SetInputConnection(surface)
-      surface = connectivity.GetOutputPort()
+      surface = state.inputModelNode.GetPolyDataConnection()
 
     state.outputModelNode.SetPolyDataConnection(surface)
     return True

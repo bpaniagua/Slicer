@@ -438,33 +438,46 @@ void vtkSlicerModelsLogic::TransformModel(vtkMRMLTransformNode *tnode,
 
   vtkAbstractTransform *transform = tnode->GetTransformToParent();
   modelOut->ApplyTransform(transform);
-
-  if (transformNormals)
-    {
-    // fix normals
-    //--- NOTE: This filter recomputes normals for polygons and
-    //--- triangle strips only. Normals are not computed for lines or vertices.
-    //--- Triangle strips are broken up into triangle polygons.
-    //--- Polygons are not automatically re-stripped.
-    vtkNew<vtkPolyDataNormals> normals;
-    normals->SetInputData(poly.GetPointer());
-    //--- NOTE: This assumes a completely closed surface
-    //---(i.e. no boundary edges) and no non-manifold edges.
-    //--- If these constraints do not hold, the AutoOrientNormals
-    //--- is not guaranteed to work.
-    normals->AutoOrientNormalsOn();
-    //--- Flipping modifies both the normal direction
-    //--- and the order of a cell's points.
-    normals->FlipNormalsOn();
-    normals->SplittingOff();
-    //--- enforce consistent polygon ordering.
-    normals->ConsistencyOn();
-
-    normals->Update();
-    modelOut->SetPolyDataConnection(normals->GetOutputPort());
-   }
-
   modelOut->SetAndObserveTransformNodeID(mtnode == NULL ? NULL : mtnode->GetID());
+
+  return;
+}
+
+//----------------------------------------------------------------------------
+void vtkSlicerModelsLogic::FlipNormals(vtkMRMLModelNode *modelNode,
+                                       vtkMRMLModelNode *modelOut,
+                                       bool autoOrient, bool flip, bool split,
+                                       double angle)
+{
+  if (!modelNode || !modelOut )
+    {
+    return;
+    }
+
+  vtkSmartPointer<vtkPolyData> poly = vtkSmartPointer<vtkPolyData>::New();
+  modelOut->SetAndObservePolyData(poly);
+
+  poly->DeepCopy(modelNode->GetPolyData());
+
+  vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
+  normals->SetInputData(poly);
+
+  if (autoOrient)
+    {
+    normals->AutoOrientNormalsOn();
+    }
+  else
+    {
+    normals->AutoOrientNormalsOff();
+    }
+
+  normals->SetFlipNormals(flip);
+  normals->SetSplitting(split);
+  normals->SetFeatureAngle(angle);
+  normals->ConsistencyOn();
+  normals->Update();
+
+  modelOut->SetPolyDataConnection(normals->GetOutputPort());
 
   return;
 }
