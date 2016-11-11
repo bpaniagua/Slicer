@@ -413,7 +413,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       connectivity = vtk.vtkPolyDataConnectivityFilter()
       connectivity.SetExtractionModeToLargestRegion()
       connectivity.SetInputConnection(surface)
-      surface = state.inputModelNode.GetPolyDataConnection()
+      surface = connectivity.GetOutputPort()
 
     state.outputModelNode.SetPolyDataConnection(surface)
     return True
