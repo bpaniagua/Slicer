@@ -90,6 +90,11 @@ class VTK_SLICER_MODELS_MODULE_LOGIC_EXPORT vtkSlicerModelsLogic
   static void FlipNormals(vtkMRMLModelNode *modelNode, vtkMRMLModelNode *modelOut, bool autoOrient = false,
                           bool flip = false, bool split = false, double angle = 0.0);
 
+  /// Mirror polydata model in a given axis
+  static void MirrorModel(vtkMRMLModelNode *modelNode,
+                                         vtkMRMLModelNode *modelOut,
+                                         bool mirrorX = 0, bool mirrorY = 0, bool mirrorZ = 0);
+
   /// Iterate through all models in the scene, find all their display nodes
   /// and set their visibility flag to flag. Does not touch model hierarchy
   /// nodes with display nodes

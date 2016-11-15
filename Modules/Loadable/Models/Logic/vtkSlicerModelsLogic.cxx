@@ -29,6 +29,7 @@
 #include <vtkNew.h>
 #include <vtkObjectFactory.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkReverseSense.h>
 #include <vtkSmartPointer.h>
 #include <vtkTagTable.h>
 
@@ -439,6 +440,62 @@ void vtkSlicerModelsLogic::TransformModel(vtkMRMLTransformNode *tnode,
   vtkAbstractTransform *transform = tnode->GetTransformToParent();
   modelOut->ApplyTransform(transform);
   modelOut->SetAndObserveTransformNodeID(mtnode == NULL ? NULL : mtnode->GetID());
+
+  return;
+}
+
+//----------------------------------------------------------------------------
+void vtkSlicerModelsLogic::MirrorModel(vtkMRMLModelNode *modelNode,
+                                       vtkMRMLModelNode *modelOut,
+                                       bool mirrorX, bool mirrorY, bool mirrorZ)
+{
+  if (!modelNode || !modelOut )
+    {
+    return;
+    }
+
+  vtkSmartPointer<vtkPolyData> poly = vtkSmartPointer<vtkPolyData>::New();
+  modelOut->SetAndObservePolyData(poly);
+
+  poly->DeepCopy(modelNode->GetPolyData());
+
+  double oldPoint[3];
+  int nPoints = poly->GetNumberOfPoints();
+  vtkSmartPointer<vtkPoints> polyPoints = poly->GetPoints();
+
+  for( int PointId = 0; PointId < nPoints; PointId++ )
+  {
+      polyPoints->GetPoint(PointId, oldPoint);
+      double newPoint[3];
+
+      if (mirrorX)
+          newPoint[0] = oldPoint[0] * (-1);
+      else
+          newPoint[0] = oldPoint[0];
+
+      if (mirrorY)
+          newPoint[1] = oldPoint[1] * (-1);
+      else
+          newPoint[1] = oldPoint[1];
+
+      if (mirrorZ)
+          newPoint[2] = oldPoint[2] * (-1);
+      else
+          newPoint[2] = oldPoint[2];
+
+      polyPoints->SetPoint(PointId, newPoint);
+  }
+
+  poly->SetPoints(polyPoints);
+  vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
+  normals->SetInputData(poly);
+  normals->AutoOrientNormalsOn();
+  normals->ConsistencyOn();
+  normals->Update();
+
+  modelOut->SetPolyDataConnection(normals->GetOutputPort());
+
+  //modelOut->SetAndObservePolyData(poly);
 
   return;
 }
